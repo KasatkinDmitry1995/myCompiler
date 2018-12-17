@@ -15,11 +15,14 @@ namespace lexer
 	class Program
 	{
 		private static List<String> cmd_list = new List<String>();
+		private static StringBuilder tmp;
+		private static Int32 i;
+		
 		
 		public static void Main(string[] args)
 		{
 			string s = "24+3;" +
-				"28 / (5 - 56) + 10-(5+8*ggg)+0b10010";
+				"28 / (5 - 56) + 10-(5+8*ggg)* -0b10010";
 
 			ListFromString(s);
 			foreach (string token in cmd_list)
@@ -31,15 +34,16 @@ namespace lexer
 		
 		private static bool IsDelimeter(char ch)
 		{
-			return ("<>=(){}*/+-~%;!".IndexOf(ch) != -1)&&char.IsWhiteSpace(ch);
+			return ("<>=(){}*/+-~%;!".IndexOf(ch) != -1)||char.IsWhiteSpace(ch);
 		}
+		
 		
 		private static void ListFromString(String code)
         {
             cmd_list.Clear();
             StringBuilder tmp = new StringBuilder();
 			code.Replace('\t', ' ');
-            Int32 i = 0;
+            i = 0;
             try
             {
                 while (i < code.Length)
@@ -107,6 +111,7 @@ namespace lexer
 		            			}
 		            		}
 		            		
+
 		            		if(tmp.Length > 0 && IsDelimeter(code[i])){
 		            			cmd_list.Add(tmp.ToString());
 		            			tmp.Length = 0;
@@ -119,7 +124,7 @@ namespace lexer
 		            		}else{
 		            			cmd_list.Add(">");
 		            			++i;
-		            		}	
+		            		}
 		            	}else if(code[i] == '<'){
 		            		if(i+1 < code.Length && code[i+1]=='='){
 		            			cmd_list.Add("<=");
@@ -135,15 +140,10 @@ namespace lexer
 		            		}else{
 		            			cmd_list.Add("!");
 		            			++i;
-		            		}	
-		            	}else if (@"{}()[]/*=+-;".IndexOf(code[i]) != -1)
+		            		}
+		            	}else if (IsDelimeter(code[i]))
 		                {
-		                	// Тут возможно сделать определение отрицательного числа
-		                	// Для этого усложним лексер. Определим может ли быть унарный минус.
-		                	// Если может быть унарный минус, то если за ним число сразу - лепим его с числом
-		                	// Если не число (да, пробел тоже все отменит) - то это уначный минус
-		     
-		                    cmd_list.Add(code[i++].ToString());
+		                   cmd_list.Add(code[i++].ToString());
 		                }
 		                else throw new Exception("Какаято херня у вас происходит.....");
 	            	}
