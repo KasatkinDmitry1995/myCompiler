@@ -12,8 +12,96 @@ using System.Text;
 
 namespace lexer
 {
-	class Program
+	public enum TokType{
+		NUMBER = 0, IDENT, ADD, SUB, MUL, DIV, MOD, NEG, L_NEG, B_NEG, SHL, SHR, DIRECTIVE,
+	}
+	
+	public abstract class Token
 	{
+		protected TokType tokenType;
+		public TokType TokenType {
+			get {
+				return tokenType;
+			}
+		}	
+		public bool IsTokOfType(TokType _tokenType)
+		{
+			return tokenType == _tokenType;
+		}
+		
+		public bool IsOperator()
+		{
+			return (tokenType >= TokType.ADD) && (TokenType <= TokType.SHR);	
+		}
+		
+		public bool IsOperand()
+		{
+			return tokenType <= TokType.IDENT; 
+		}
+	}
+	
+	public class SimpleToken: Token
+	{
+		public SimpleToken(TokType _tokenType)
+		{
+			tokenType = _tokenType;
+		}
+	}
+	
+	public class NumberToken: Token
+	{
+		private Int64 number;
+		public Int64 Number{
+			get{
+				return number;
+			}
+		}
+		
+		public NumberToken(String str, Byte numBase)
+		{
+			switch(numBase)
+			{
+				case 2:
+					number = Convert.ToInt64(str.Substring(2),2);
+					break;
+				case 8:
+					number = Convert.ToInt64(str.Substring(1),8);
+					break;
+				case 10:
+					number = Convert.ToInt64(str,10);
+					break;
+				case 16:
+					number = Convert.ToInt64(str.Substring(2),16);
+					break;
+			}
+		}
+		
+	}
+	
+	public class IdentToken: Token
+	{
+		private String ident;
+		public string Ident {
+			get {
+				return ident;
+			}
+		}
+		private TokType tokenType;
+		public TokType TokenType {
+			get {
+				return tokenType;
+			}
+		}
+		
+		public IdentToken(String _ident)
+		{
+			ident = _ident;
+		}
+	}
+	
+	public class Program
+	{
+		private static List<Token> command_list = new List<Token>();
 		private static List<String> cmd_list = new List<String>();
 		private static StringBuilder tmp;
 		private static Int32 i;
@@ -21,8 +109,10 @@ namespace lexer
 		
 		public static void Main(string[] args)
 		{
-			string s = "24+3;" +
-				"28 / (5 - 56) + 10-(5+8*ggg)* -0b10010";
+			string s = "24+3;\n" +
+				"28 / (5 - 56) + 10-(5+8*ggg)* -0b10010\n" +
+				"//gbfgbfgbfg gbft b fgb fgb f\n" +
+				"gbfgb + g\n";
 
 			ListFromString(s);
 			foreach (string token in cmd_list)
@@ -50,29 +140,6 @@ namespace lexer
                 {
                 	// Удаляем пробелы
 					while (i < code.Length && Char.IsWhiteSpace(code[i]))
-						++i;
-					
-					// Обработка комментраиев
-					if (code[i] == '/' && code[i+1] == '/')
-					{
-						int id = code.IndexOf('\n');
-						i = code.IndexOf('\n', i) + 1;
-					}
-					
-					// Закончилась строка
-					if (code[i] == '\n')
-					{
-						// Если есть что добавлять то добавляем
-						if (tmp.Length!=0)
-						{
-							cmd_list.Add(tmp.ToString());
-							tmp.Length = 0;
-						}
-						++i;
-					}
-					
-					// Снова удаляем пробелы
-                    while (i < code.Length && Char.IsWhiteSpace(code, i))
 						++i;
                     
 					// Нашли букву - считываем идентификатор в буфер
@@ -143,7 +210,13 @@ namespace lexer
 		            		}
 		            	}else if (IsDelimeter(code[i]))
 		                {
-		                   cmd_list.Add(code[i++].ToString());
+		            		if (code.Length >= i+1 && code[i] == '/' && code[i+1] == '/') // пропускаем комментарии
+							{
+								int id = code.IndexOf('\n');
+								i = code.IndexOf('\n', i) + 1;
+		            		}else{
+		                   		cmd_list.Add(code[i++].ToString());
+		            		}
 		                }
 		                else throw new Exception("Какаято херня у вас происходит.....");
 	            	}
