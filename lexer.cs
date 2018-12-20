@@ -13,7 +13,9 @@ using System.Text;
 namespace lexer
 {
 	public enum TokType{
-		NUMBER = 0, IDENT, ADD, SUB, MUL, DIV, MOD, NEG, L_NEG, B_NEG, SHL, SHR, DIRECTIVE,
+		NUMBER = 0, IDENT, ADD, SUB, MUL, DIV, MOD, NEG, SHL, SHR, 
+		CONDL, CONDG, CONDLE, CONDGE, CONDE, CONDNE,
+		DIRECTIVE
 	}
 	
 	public abstract class Token
@@ -38,6 +40,7 @@ namespace lexer
 		{
 			return tokenType <= TokType.IDENT; 
 		}
+		public abstract override String ToString();
 	}
 	
 	public class SimpleToken: Token
@@ -45,6 +48,10 @@ namespace lexer
 		public SimpleToken(TokType _tokenType)
 		{
 			tokenType = _tokenType;
+		}
+		
+		public override String ToString(){
+			return @"["+tokenType.ToString()+@"]";
 		}
 	}
 	
@@ -59,6 +66,7 @@ namespace lexer
 		
 		public NumberToken(String str, Byte numBase)
 		{
+			tokenType = TokType.NUMBER;
 			switch(numBase)
 			{
 				case 2:
@@ -76,6 +84,10 @@ namespace lexer
 			}
 		}
 		
+		public override String ToString(){
+			return @"["+tokenType.ToString()+"] = \"" + number.ToString() + "\"";
+		}
+		
 	}
 	
 	public class IdentToken: Token
@@ -86,23 +98,21 @@ namespace lexer
 				return ident;
 			}
 		}
-		private TokType tokenType;
-		public TokType TokenType {
-			get {
-				return tokenType;
-			}
-		}
-		
+
 		public IdentToken(String _ident)
 		{
 			ident = _ident;
+			tokenType = TokType.IDENT;
+		}
+		
+		public override String ToString(){
+			return @"["+tokenType.ToString()+"] = \"" + ident + "\"";	
 		}
 	}
 	
 	public class Program
 	{
-		private static List<Token> command_list = new List<Token>();
-		private static List<String> cmd_list = new List<String>();
+		private static List<Token> commandList = new List<Token>();
 		private static StringBuilder tmp;
 		private static Int32 i;
 		
@@ -115,9 +125,10 @@ namespace lexer
 				"gbfgb + g\n";
 
 			ListFromString(s);
-			foreach (string token in cmd_list)
-			Console.WriteLine(token);	
-			Console.Write("Press any key to continue . . . ");
+		
+			foreach (Token token in commandList)
+				Console.WriteLine(token);	
+			Console.WriteLine("Press any key to continue . . . ");
 			Console.ReadKey(true);
 			
 		}
@@ -130,10 +141,10 @@ namespace lexer
 		
 		private static void ListFromString(String code)
         {
-            cmd_list.Clear();
             StringBuilder tmp = new StringBuilder();
 			code.Replace('\t', ' ');
             i = 0;
+            Byte numberBase; 
             try
             {
                 while (i < code.Length)
@@ -151,7 +162,7 @@ namespace lexer
 					}
 	            	// Если что-то нашли при поиске идентификатора - сохраняем
 	            	if(tmp.Length > 0){
-	            		cmd_list.Add(tmp.ToString());
+	            		commandList.Add(new IdentToken(tmp.ToString()));
 	            		tmp.Length = 0; // И очищаем буфер
 	            	}else if(i < code.Length)
 	            	{
@@ -162,17 +173,21 @@ namespace lexer
 		            			
 		            			if(code[i+1] == 'x')
 			            		{
+		            				numberBase = 16;
 		            				while(i < code.Length && code[i] > '0' && code[i] <= '9' 
 		            				      && char.ToUpper(code[i]) > 'A' && char.ToUpper(code[i]) <= 'F')
 		            					tmp.Append(code[i++]);
 		            			}else if(code[i+1] == 'b'){
+		            				numberBase = 2;
 		            				while(i < code.Length && code[i] == '0' && code[i] == '1')
 		            					tmp.Append(code[i++]);
 		            			}else{
+		            				numberBase = 8;
 		            				while(i < code.Length && code[i] > '0' && code[i] <= '7')
 		            					tmp.Append(code[i++]);
 		            			}
 		            		}else{
+		            			numberBase = 10;
 		            			while(char.IsDigit(code,i)){
 		            				tmp.Append(code[i++]);
 		            			}
@@ -180,32 +195,32 @@ namespace lexer
 		            		
 
 		            		if(tmp.Length > 0 && IsDelimeter(code[i])){
-		            			cmd_list.Add(tmp.ToString());
+		            			commandList.Add(new NumberToken(tmp.ToString(),numberBase));
 		            			tmp.Length = 0;
 		            		}	
 				
 		            	}else if(code[i] == '>'){// Далее пытаемся поймать операторы
 		            		if(i+1 < code.Length && code[i+1]=='='){
-		            			cmd_list.Add(">=");
+		            			commandList.Add(new SimpleToken(TokType.CONDGE));
 		            			i += 2;             
 		            		}else{
-		            			cmd_list.Add(">");
+		            			commandList.Add(new SimpleToken(TokType.CONDG));
 		            			++i;
 		            		}
 		            	}else if(code[i] == '<'){
 		            		if(i+1 < code.Length && code[i+1]=='='){
-		            			cmd_list.Add("<=");
+		            			commandList.Add(new SimpleToken(TokType.CONDLE));
 		            			i += 2;             
 		            		}else{
-		            			cmd_list.Add("<");
+		            			commandList.Add(new SimpleToken(TokType.CONDL));
 		            			++i;
 		            		}	
 		            	}else if(code[i] == '!'){
 		            		if(i+1 < code.Length && code[i+1]=='='){
-		            			cmd_list.Add("!=");
+		            			commandList.Add(new SimpleToken(TokType.CONDNE));
 		            			i += 2;             
 		            		}else{
-		            			cmd_list.Add("!");
+		            			commandList.Add(new SimpleToken(TokType.NEG));
 		            			++i;
 		            		}
 		            	}else if (IsDelimeter(code[i]))
@@ -215,7 +230,8 @@ namespace lexer
 								int id = code.IndexOf('\n');
 								i = code.IndexOf('\n', i) + 1;
 		            		}else{
-		                   		cmd_list.Add(code[i++].ToString());
+		            			commandList.Add(new SimpleToken(TokType.ADD));
+		            			++i;
 		            		}
 		                }
 		                else throw new Exception("Какаято херня у вас происходит.....");
