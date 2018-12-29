@@ -156,10 +156,7 @@ namespace lexer
 
     public class Program
     {
-        private static List<Token> commandList = new List<Token>();
-        private static List<String> errorList = new List<string>();
-        
-        public static void Main(string[] args)
+    	public static void Main(string[] args)
         {
             string s = "a?=5;\n" +
                 "?a =  b-3?;//gbfgbfgbfg gbft b fgb fgb f\n" +
@@ -174,20 +171,89 @@ namespace lexer
             	"\n" +
             	"";
 
-            ListFromString(s);
+            Lexer lex = new Lexer();
+            lex.Tokenize(s);
+			
+            while(lex.Next())
+            {
+            	Console.WriteLine(lex.GetCurrentToken());
+            }
+            
+            if(lex.HasErrors()){
+               	int l = lex.GetErrorsCount(), i = 0;
+               	while(i < l)
+               		Console.WriteLine(lex.GetError(i++));
+            }
 
-            foreach (Token token in commandList)
-                Console.WriteLine(token);
-            foreach (String str in errorList)
-            	Console.WriteLine(str);
             Console.WriteLine("Press any key to continue . . . ");
             Console.ReadKey(true);
 
-        }
+        }	
+    }
+    
+    public class Lexer
+    {
+        private List<Token> commandList = new List<Token>();
+        private List<String> errorList = new List<string>();
+        public int currentTok;
 
-        private static void ListFromString(String code)
+        public Token GetNextToken(bool eat)
         {
-        	
+        	if (currentTok < commandList.Count)
+        	{
+        		if(eat)
+        			return commandList[currentTok++];
+        		else
+        			return commandList[currentTok];
+        	}else 
+        		return null;        		
+        }
+        
+        public Token GetCurrentToken()
+        {
+        	if (currentTok < 0 || currentTok >= commandList.Count)
+        		return null;
+        	else	
+        		return commandList[currentTok];
+        }
+        
+        public bool Next()
+        {
+        	if (currentTok < commandList.Count){
+				currentTok++;
+				return true;
+        	}
+        	else 
+        		return false;		
+        }
+        
+        public bool HasMoreTokens()
+        {
+        	return currentTok < commandList.Count;	
+        }
+        
+        public bool HasErrors()
+        {
+        	return errorList.Count != 0;
+        }
+        
+        public String GetError(int n)
+        {
+        	if(n<errorList.Count)
+        		return errorList[n];
+        	else
+        		return null;
+        }
+        
+        public int GetErrorsCount(){
+        	return errorList.Count;
+        }
+        
+        public void Tokenize(String code)
+        {
+        	commandList.Clear();
+        	errorList.Clear();
+        	currentTok = -1;
             StringBuilder tmp = new StringBuilder();
             Int32 line = 1, i = 0, last_i = -1;
             Byte numberBase;
